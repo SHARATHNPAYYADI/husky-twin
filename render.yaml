@@ -1,0 +1,23 @@
+# Render Blueprint — https://render.com/docs/infrastructure-as-code
+#
+# Deploy: Render dashboard -> New -> Blueprint -> connect this repo.
+# Render finds this file automatically (must be at repo root).
+#
+# After the first deploy, set FRONTEND_ORIGINS in the Render dashboard
+# (Environment tab) to your Vercel URL, e.g.:
+#   https://husky-twin.vercel.app
+# Comma-separate multiple origins if needed. localhost:5173 always works
+# regardless — see backend/app/main.py.
+
+services:
+  - type: web
+    name: husky-twin-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: FRONTEND_ORIGINS
+        value: ""

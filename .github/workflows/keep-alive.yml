@@ -1,0 +1,21 @@
+# Pings the backend's /health endpoint every 14 minutes so Render's free
+# tier never sees 15 minutes of inactivity and never spins down.
+#
+# Setup (after the backend is deployed on Render):
+#   repo Settings -> Secrets and variables -> Actions -> New repository secret
+#   name: RENDER_BACKEND_URL
+#   value: https://husky-twin-backend.onrender.com   (no trailing slash)
+
+name: Keep Render backend alive
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health check
+        run: curl -sf "${{ secrets.RENDER_BACKEND_URL }}/health"

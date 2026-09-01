@@ -7,6 +7,8 @@ backend/**/__pycache__/
 # frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.env
+frontend/.env.local
 
 # editors / OS
 .vscode/

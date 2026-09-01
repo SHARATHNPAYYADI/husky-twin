@@ -1,7 +1,9 @@
 import type { FullSnapshot, Obstacle, RobotState, RunReport, WSMessage } from "../schema/types";
 import { useSimStore } from "../store/simStore";
 
-const WS_URL = "ws://localhost:8000/ws";
+// In dev this falls back to localhost. In production, set VITE_WS_URL in
+// Vercel's dashboard to your Render backend's wss:// URL.
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000/ws";
 
 let socket: WebSocket | null = null;
 

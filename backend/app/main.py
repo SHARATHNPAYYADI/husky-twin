@@ -21,6 +21,7 @@ need for WareTwin's FULL/PATCH-diffing machinery here.
 
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -31,6 +32,21 @@ from app.schema import Obstacle, RobotStateEnum, WarehouseLayout, WSMessage
 from app.sim.engine import SimulationEngine
 
 LAYOUT_PATH = Path(__file__).parent / "layout" / "warehouse_layout.json"
+
+# Local dev always works; production origins (e.g. the Vercel URL) are added
+# via the FRONTEND_ORIGINS env var (comma-separated) — set on Render.
+_DEFAULT_ORIGINS = ["http://localhost:5173"]
+
+
+def _load_allowed_origins() -> list[str]:
+    extra = [o.strip() for o in os.environ.get("FRONTEND_ORIGINS", "").split(",") if o.strip()]
+    seen: set[str] = set()
+    combined: list[str] = []
+    for origin in _DEFAULT_ORIGINS + extra:
+        if origin not in seen:
+            seen.add(origin)
+            combined.append(origin)
+    return combined
 
 
 def load_layout() -> WarehouseLayout:
@@ -93,10 +109,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Husky Digital Twin — backend", lifespan=lifespan)
 
-# Vite's default dev server port. Add the deployed frontend origin later.
+# Vite's default dev server port, plus whatever FRONTEND_ORIGINS adds in production.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_load_allowed_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
