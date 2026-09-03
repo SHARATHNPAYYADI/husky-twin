@@ -1,4 +1,12 @@
-import type { FullSnapshot, Obstacle, RobotState, RunReport, WSMessage } from "../schema/types";
+import type {
+  Cell,
+  FullSnapshot,
+  Obstacle,
+  ObstaclesMessage,
+  RobotState,
+  RunReport,
+  WSMessage,
+} from "../schema/types";
 import { useSimStore } from "../store/simStore";
 
 // In dev this falls back to localhost. In production, set VITE_WS_URL in
@@ -28,6 +36,8 @@ export function connect(): void {
       store.applyPatch(msg.data as RobotState);
     } else if (msg.type === "report") {
       store.applyReport(msg.data as RunReport);
+    } else if (msg.type === "obstacles") {
+      store.setObstacles((msg.data as ObstaclesMessage).obstacles);
     }
   };
 }
@@ -38,8 +48,8 @@ function send(message: WSMessage): void {
   }
 }
 
-export function startRun(target?: [number, number]): void {
-  send({ type: "start_run", data: target ? { target } : {} });
+export function startRun(targets?: Cell[]): void {
+  send({ type: "start_run", data: targets && targets.length > 0 ? { targets } : {} });
 }
 
 export function sendPlaceObstacle(obstacle: Obstacle): void {

@@ -5,6 +5,7 @@ import { Warehouse } from "./Warehouse";
 import { HuskyRobot } from "./HuskyRobot";
 import { PathLine } from "./PathLine";
 import { ObstacleMarkers } from "./ObstacleMarkers";
+import { TargetMarkers } from "./TargetMarkers";
 
 export function Scene({
   layout,
@@ -12,6 +13,8 @@ export function Scene({
   robotHeading = 0,
   path = [],
   obstacles = [],
+  targets = [],
+  targetsReachedCount = 0,
   onFloorClick,
 }: {
   layout: WarehouseLayout;
@@ -19,6 +22,8 @@ export function Scene({
   robotHeading?: number;
   path?: Cell[];
   obstacles?: Obstacle[];
+  targets?: Cell[];
+  targetsReachedCount?: number;
   onFloorClick?: (cell: Cell) => void;
 }) {
   const span = Math.max(layout.width, layout.height);
@@ -44,6 +49,7 @@ export function Scene({
       <Warehouse layout={layout} onFloorClick={onFloorClick} />
       <PathLine layout={layout} path={path} />
       <ObstacleMarkers layout={layout} obstacles={obstacles} />
+      <TargetMarkers layout={layout} targets={targets} reachedCount={targetsReachedCount} />
       <HuskyRobot layout={layout} position={robotPosition} heading={robotHeading} />
 
       <OrbitControls

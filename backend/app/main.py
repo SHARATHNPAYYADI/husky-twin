@@ -4,14 +4,20 @@ Wires SimulationEngine into a WebSocket endpoint.
 Message protocol (matches app.schema.WSMessage):
 
   server -> client
-    {"type": "full",   "data": {"layout": ..., "robot": ...}}   once, on connect
-    {"type": "patch",  "data": <RobotState>}                    every tick (~100ms)
-    {"type": "report", "data": <RunReport>}                     once, when a run finishes
+    {"type": "full",      "data": {"layout": ..., "robot": ..., "obstacles": [...]}}  once, on connect
+    {"type": "patch",     "data": <RobotState>}                 every tick (~100ms)
+    {"type": "report",    "data": <RunReport>}                  once, when a run finishes
+    {"type": "obstacles", "data": {"obstacles": [...]}}         whenever the obstacle list changes
 
   client -> server
-    {"type": "start_run",      "data": {}}                      or {"target": [x, y]}
+    {"type": "start_run",      "data": {}}                      or {"target": [x, y]} or {"targets": [[x, y], ...]}
     {"type": "place_obstacle", "data": {"id": ..., "type": ..., "cell": [x, y]}}
     {"type": "reset",          "data": {}}
+
+REST (app/db.py backs these with SQLite — see that module for caveats):
+  GET /health
+  GET /runs?limit=50   -> list of past RunReports, newest first
+  GET /runs/{run_id}   -> single RunReport
 
 Kept deliberately simple: one shared engine, one warehouse, one robot.
 "patch" sends the full robot state every tick rather than a real diff —
@@ -25,9 +31,10 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import db
 from app.schema import Obstacle, RobotStateEnum, WarehouseLayout, WSMessage
 from app.sim.engine import SimulationEngine
 
@@ -95,13 +102,24 @@ async def _tick_loop() -> None:
         if state_after != RobotStateEnum.IDLE or state_before != state_after or report_ready:
             await _broadcast(WSMessage(type="patch", data=engine.robot.model_dump(mode="json")))
 
+        if engine.obstacles_dirty:
+            engine.obstacles_dirty = False
+            await _broadcast(
+                WSMessage(
+                    type="obstacles",
+                    data={"obstacles": [o.model_dump(mode="json") for o in engine.obstacles.values()]},
+                )
+            )
+
         if report_ready:
             _last_sent_report_id = engine.last_report.run_id
+            db.save_run(engine.last_report)
             await _broadcast(WSMessage(type="report", data=engine.last_report.model_dump(mode="json")))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db.init_db()
     task = asyncio.create_task(_tick_loop())
     yield
     task.cancel()
@@ -123,6 +141,19 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/runs")
+def list_runs(limit: int = 50) -> list[dict]:
+    return db.list_runs(limit=limit)
+
+
+@app.get("/runs/{run_id}")
+def get_run(run_id: str):
+    run = db.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    return run
+
+
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
@@ -133,6 +164,7 @@ async def ws_endpoint(websocket: WebSocket) -> None:
         data={
             "layout": engine.layout.model_dump(mode="json"),
             "robot": engine.robot.model_dump(mode="json"),
+            "obstacles": [o.model_dump(mode="json") for o in engine.obstacles.values()],
         },
     )
     await websocket.send_json(full.model_dump(mode="json"))
@@ -155,9 +187,16 @@ async def _handle_message(raw: dict) -> None:
         return  # malformed message — ignore for v1
 
     if msg.type == "start_run":
-        target = tuple(msg.data["target"]) if msg.data.get("target") else None
+        # "targets" (a queue of stops) takes precedence; "target" (a single
+        # stop) is kept for backward compatibility — both become a queue.
+        if msg.data.get("targets"):
+            targets = [tuple(t) for t in msg.data["targets"]]
+        elif msg.data.get("target"):
+            targets = [tuple(msg.data["target"])]
+        else:
+            targets = None
         try:
-            engine.start_run(target=target)
+            engine.start_run(targets=targets)
         except ValueError:
             pass  # no path from the current position — nothing to do for v1
         await _broadcast(WSMessage(type="patch", data=engine.robot.model_dump(mode="json")))
