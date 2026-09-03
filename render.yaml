@@ -9,6 +9,14 @@
 # Comma-separate multiple origins if needed. localhost:5173 always works
 # regardless — see backend/app/main.py.
 #
+# FRONTEND_ORIGINS is marked `sync: false` below on purpose: without it,
+# Render re-syncs env vars from this file on every Blueprint deploy and
+# silently overwrites whatever you set in the dashboard back to "" — which
+# breaks CORS for every REST call (GET /runs, GET/POST /layouts, etc. —
+# anything besides the WebSocket, which Starlette's CORS middleware doesn't
+# gate anyway) the next time you push to main. `sync: false` tells Render
+# "dashboard owns this value, don't touch it."
+#
 # Run history is stored in SQLite at backend/app/data/runs.db (see
 # backend/app/db.py). Render's free web service filesystem is ephemeral, so
 # this resets on every deploy/restart. If run history needs to survive
@@ -29,4 +37,4 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.7
       - key: FRONTEND_ORIGINS
-        value: ""
+        sync: false
