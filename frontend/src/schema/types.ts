@@ -89,3 +89,16 @@ export interface FullSnapshot {
 export interface ObstaclesMessage {
   obstacles: Obstacle[];
 }
+
+// REST-only (not part of the WS protocol) — see backend/app/main.py's /layouts routes.
+export interface LayoutSummary {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  created_at: string;
+}
+
+export interface SavedLayout extends LayoutSummary {
+  layout: WarehouseLayout;
+}

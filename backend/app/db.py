@@ -2,8 +2,9 @@
 Run history persistence.
 
 SQLite via stdlib `sqlite3` — no ORM, matches the rest of this project's
-"deliberately simple" style (see app/main.py). One `runs` table, one row
-per finished run (completed or stopped).
+"deliberately simple" style (see app/main.py). Two tables: `runs` (one row
+per finished run) and `layouts` (one row per saved warehouse layout, see
+the layout editor in the frontend).
 
 Note: on Render's free tier the filesystem is ephemeral, so the DB resets
 on every deploy/restart. That's an accepted tradeoff for now — see
@@ -18,7 +19,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from app.schema import RunReport
+from app.schema import RunReport, WarehouseLayout
 
 DB_PATH = Path(os.environ.get("HUSKY_DB_PATH", Path(__file__).parent / "data" / "runs.db"))
 
@@ -45,6 +46,18 @@ def init_db() -> None:
                 end_time TEXT NOT NULL,
                 status TEXT NOT NULL,
                 legs TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS layouts (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                width INTEGER NOT NULL,
+                height INTEGER NOT NULL,
+                data TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
             """
@@ -95,3 +108,36 @@ def get_run(run_id: str) -> dict | None:
     with _connect() as conn:
         row = conn.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
     return _row_to_dict(row) if row else None
+
+
+def save_layout(layout_id: str, name: str, layout: WarehouseLayout) -> None:
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO layouts (id, name, width, height, data)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name, width = excluded.width,
+                height = excluded.height, data = excluded.data
+            """,
+            (layout_id, name, layout.width, layout.height, layout.model_dump_json()),
+        )
+
+
+def list_layouts() -> list[dict]:
+    """Summaries only (no `data`) — enough for a picker list."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT id, name, width, height, created_at FROM layouts ORDER BY created_at DESC"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_layout(layout_id: str) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute("SELECT * FROM layouts WHERE id = ?", (layout_id,)).fetchone()
+    if row is None:
+        return None
+    d = dict(row)
+    d["layout"] = json.loads(d.pop("data"))
+    return d

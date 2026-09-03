@@ -16,8 +16,13 @@ Message protocol (matches app.schema.WSMessage):
 
 REST (app/db.py backs these with SQLite — see that module for caveats):
   GET /health
-  GET /runs?limit=50   -> list of past RunReports, newest first
-  GET /runs/{run_id}   -> single RunReport
+  GET /runs?limit=50          -> list of past RunReports, newest first
+  GET /runs/{run_id}          -> single RunReport
+  GET /layouts                -> list of saved layout summaries (no cell data)
+  GET /layouts/starter        -> a freshly generated layout, as a starting point for the editor
+  GET /layouts/{layout_id}    -> a saved layout's full data
+  POST /layouts               -> {"name": ..., "layout": WarehouseLayout} -> save, returns {"id": ...}
+  POST /layouts/{layout_id}/activate -> swap the running sim onto this layout (resets the run)
 
 Kept deliberately simple: one shared engine, one warehouse, one robot.
 "patch" sends the full robot state every tick rather than a real diff —
@@ -28,6 +33,7 @@ need for WareTwin's FULL/PATCH-diffing machinery here.
 import asyncio
 import json
 import os
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -35,7 +41,8 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import db
-from app.schema import Obstacle, RobotStateEnum, WarehouseLayout, WSMessage
+from app.layout.generate_layout import build_layout as generate_starter_layout
+from app.schema import LayoutCreateRequest, Obstacle, RobotStateEnum, WarehouseLayout, WSMessage
 from app.sim.engine import SimulationEngine
 
 LAYOUT_PATH = Path(__file__).parent / "layout" / "warehouse_layout.json"
@@ -65,6 +72,17 @@ layout = load_layout()
 engine = SimulationEngine(layout)
 connected: set[WebSocket] = set()
 _last_sent_report_id: str | None = None
+
+
+def _full_snapshot() -> WSMessage:
+    return WSMessage(
+        type="full",
+        data={
+            "layout": engine.layout.model_dump(mode="json"),
+            "robot": engine.robot.model_dump(mode="json"),
+            "obstacles": [o.model_dump(mode="json") for o in engine.obstacles.values()],
+        },
+    )
 
 
 async def _broadcast(message: WSMessage) -> None:
@@ -154,20 +172,57 @@ def get_run(run_id: str):
     return run
 
 
+@app.get("/layouts")
+def list_layouts() -> list[dict]:
+    return db.list_layouts()
+
+
+@app.get("/layouts/starter")
+def get_starter_layout() -> dict:
+    """A freshly generated layout for the editor to prefill — the same
+    procedural generator that produced the built-in warehouse_layout.json."""
+    return generate_starter_layout()
+
+
+@app.get("/layouts/{layout_id}")
+def get_layout(layout_id: str) -> dict:
+    saved = db.get_layout(layout_id)
+    if saved is None:
+        raise HTTPException(status_code=404, detail="layout not found")
+    return saved
+
+
+@app.post("/layouts")
+def create_layout(body: LayoutCreateRequest) -> dict:
+    layout_id = str(uuid.uuid4())
+    db.save_layout(layout_id, body.name, body.layout)
+    return {"id": layout_id}
+
+
+@app.post("/layouts/{layout_id}/activate")
+async def activate_layout(layout_id: str) -> dict:
+    """Swaps the running sim onto a saved layout. This replaces the global
+    engine outright (a fresh robot, empty obstacles) rather than trying to
+    reconcile in-flight state against a different-shaped warehouse."""
+    saved = db.get_layout(layout_id)
+    if saved is None:
+        raise HTTPException(status_code=404, detail="layout not found")
+
+    global engine, layout, _last_sent_report_id
+    layout = WarehouseLayout(**saved["layout"])
+    engine = SimulationEngine(layout)
+    _last_sent_report_id = None
+
+    await _broadcast(_full_snapshot())
+    return {"status": "ok"}
+
+
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     connected.add(websocket)
 
-    full = WSMessage(
-        type="full",
-        data={
-            "layout": engine.layout.model_dump(mode="json"),
-            "robot": engine.robot.model_dump(mode="json"),
-            "obstacles": [o.model_dump(mode="json") for o in engine.obstacles.values()],
-        },
-    )
-    await websocket.send_json(full.model_dump(mode="json"))
+    await websocket.send_json(_full_snapshot().model_dump(mode="json"))
 
     try:
         while True:
