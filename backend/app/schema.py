@@ -45,6 +45,13 @@ class WarehouseLayout(BaseModel):
     target: Cell
 
 
+class LayoutCreateRequest(BaseModel):
+    """Body for POST /layouts — saves a new named layout."""
+
+    name: str
+    layout: WarehouseLayout
+
+
 class Obstacle(BaseModel):
     """A placed obstacle. `type` is free-form for forward-compatibility, but
     the two types the frontend's obstacle picker sends are:

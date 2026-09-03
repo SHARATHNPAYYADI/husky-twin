@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Scene } from "./scene/Scene";
 import { ReportPanel } from "./components/ReportPanel";
+import { LayoutEditor } from "./components/LayoutEditor";
 import { useSimStore } from "./store/simStore";
 import { connect, resetRun, sendPlaceObstacle, startRun } from "./ws/client";
 import type { Cell, ObstacleType } from "./schema/types";
@@ -34,6 +35,7 @@ export default function App() {
   // kept fixed for the whole run so markers don't disappear/renumber as
   // stops are reached; cleared on Reset.
   const [activeRunTargets, setActiveRunTargets] = useState<Cell[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const handleFloorClick = (cell: Cell) => {
     if (!layout) return;
@@ -128,6 +130,9 @@ export default function App() {
           <button onClick={handleReset} style={btnStyle}>
             Reset
           </button>
+          <button onClick={() => setEditorOpen(true)} style={btnStyle}>
+            Edit Layout
+          </button>
         </div>
 
         <div style={{ marginTop: 12, fontSize: 11, color: "#8b929a" }}>click mode</div>
@@ -201,6 +206,19 @@ export default function App() {
 
       {showReportModal && report && (
         <ReportPanel report={report} onClose={() => setDismissedReportId(report.run_id)} />
+      )}
+
+      {editorOpen && (
+        <LayoutEditor
+          onClose={() => {
+            // Activating a layout replaces the engine/robot entirely, so any
+            // queued/in-flight target state from the old layout is stale.
+            setQueuedTargets([]);
+            setActiveRunTargets([]);
+            setDismissedReportId(null);
+            setEditorOpen(false);
+          }}
+        />
       )}
     </div>
   );
