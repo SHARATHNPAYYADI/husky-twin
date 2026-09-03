@@ -45,6 +45,35 @@ export function ReportPanel({ report, onClose }: { report: RunReport; onClose: (
             </div>
           </div>
         )}
+
+        {report.legs.length > 1 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={sectionLabelStyle}>stops ({report.legs.length})</div>
+            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+              {report.legs.map((leg, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 11,
+                    color: "#c7ccd1",
+                    borderBottom: i < report.legs.length - 1 ? "1px solid #2a2f34" : undefined,
+                    paddingBottom: 4,
+                  }}
+                >
+                  <span>
+                    #{i + 1} ({leg.target[0]}, {leg.target[1]})
+                  </span>
+                  <span>
+                    {leg.distance_traveled} cells · {leg.duration_s}s
+                    {leg.replans_triggered > 0 ? ` · ${leg.replans_triggered} replans` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

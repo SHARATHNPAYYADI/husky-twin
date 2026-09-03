@@ -8,6 +8,13 @@
 #   https://husky-twin.vercel.app
 # Comma-separate multiple origins if needed. localhost:5173 always works
 # regardless — see backend/app/main.py.
+#
+# Run history is stored in SQLite at backend/app/data/runs.db (see
+# backend/app/db.py). Render's free web service filesystem is ephemeral, so
+# this resets on every deploy/restart. If run history needs to survive
+# restarts, add a paid persistent disk (`disks:` on this service, mounted
+# at e.g. /var/data, with HUSKY_DB_PATH set to a path under it) or point
+# HUSKY_DB_PATH-equivalent logic at an external Postgres instead.
 
 services:
   - type: web

@@ -24,9 +24,13 @@ export interface WarehouseLayout {
   target: Cell;
 }
 
+// The types the obstacle picker sends — see backend/app/schema.py's
+// Obstacle docstring for their blocking/moving behavior.
+export type ObstacleType = "pallet" | "person";
+
 export interface Obstacle {
   id: string;
-  type: string; // "fire_extinguisher" | "box" | ...
+  type: string; // ObstacleType in practice; free-form on the wire
   cell: Cell;
 }
 
@@ -36,9 +40,17 @@ export interface RobotState {
   heading: number; // radians
   state: RobotStateEnum;
   path: Cell[];
-  target: Cell | null;
+  target: Cell | null; // current leg's destination
+  task_queue: Cell[]; // remaining stops after `target`
   distance_traveled: number;
   replans: number;
+}
+
+export interface TaskLeg {
+  target: Cell;
+  distance_traveled: number;
+  duration_s: number;
+  replans_triggered: number;
 }
 
 export interface RunReport {
@@ -51,6 +63,7 @@ export interface RunReport {
   start_time: string; // ISO 8601
   end_time: string; // ISO 8601
   status: "completed" | "stopped";
+  legs: TaskLeg[]; // one entry per stop actually reached
 }
 
 export type WSMessageType =
@@ -59,7 +72,8 @@ export type WSMessageType =
   | "place_obstacle"
   | "report"
   | "start_run"
-  | "reset";
+  | "reset"
+  | "obstacles";
 
 export interface WSMessage<T = unknown> {
   type: WSMessageType;
@@ -69,4 +83,9 @@ export interface WSMessage<T = unknown> {
 export interface FullSnapshot {
   layout: WarehouseLayout;
   robot: RobotState;
+  obstacles: Obstacle[];
+}
+
+export interface ObstaclesMessage {
+  obstacles: Obstacle[];
 }

@@ -8,12 +8,13 @@ interface SimState {
   layout: WarehouseLayout | null;
   robot: RobotState | null;
   report: RunReport | null;
-  obstacles: Obstacle[]; // tracked locally — the backend doesn't broadcast this list separately
+  obstacles: Obstacle[]; // authoritative list, synced from the backend's "obstacles" broadcasts
 
   setStatus: (status: ConnectionStatus) => void;
   applyFull: (snapshot: FullSnapshot) => void;
   applyPatch: (robot: RobotState) => void;
   applyReport: (report: RunReport) => void;
+  setObstacles: (obstacles: Obstacle[]) => void;
   addLocalObstacle: (obstacle: Obstacle) => void;
 }
 
@@ -25,8 +26,13 @@ export const useSimStore = create<SimState>((set) => ({
   obstacles: [],
 
   setStatus: (status) => set({ status }),
-  applyFull: (snapshot) => set({ layout: snapshot.layout, robot: snapshot.robot }),
+  applyFull: (snapshot) =>
+    set({ layout: snapshot.layout, robot: snapshot.robot, obstacles: snapshot.obstacles }),
   applyPatch: (robot) => set({ robot }),
   applyReport: (report) => set({ report }),
+  setObstacles: (obstacles) => set({ obstacles }),
+  // Optimistic add so a freshly placed obstacle appears before the next
+  // tick's authoritative "obstacles" broadcast arrives; that broadcast
+  // then replaces this via setObstacles.
   addLocalObstacle: (obstacle) => set((s) => ({ obstacles: [...s.obstacles, obstacle] })),
 }));
