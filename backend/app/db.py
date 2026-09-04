@@ -110,6 +110,46 @@ def get_run(run_id: str) -> dict | None:
     return _row_to_dict(row) if row else None
 
 
+def get_stats(recent_limit: int = 20) -> dict:
+    """Aggregates over every stored run — small-scale enough (SQLite, one
+    project's worth of runs) that computing this in Python on each request
+    is simpler than maintaining running totals or SQL aggregates."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT * FROM runs ORDER BY created_at ASC").fetchall()
+    runs = [_row_to_dict(r) for r in rows]
+    total = len(runs)
+
+    completed = sum(1 for r in runs if r["status"] == "completed")
+    runs_with_replans = sum(1 for r in runs if r["replans_triggered"] > 0)
+
+    obstacle_type_counts: dict[str, int] = {}
+    for r in runs:
+        for t in r["obstacles_encountered"]:
+            obstacle_type_counts[t] = obstacle_type_counts.get(t, 0) + 1
+
+    by_day: dict[str, int] = {}
+    for r in runs:
+        day = r["created_at"][:10]  # "YYYY-MM-DD" prefix of the sqlite datetime
+        by_day[day] = by_day.get(day, 0) + 1
+    runs_per_day = [{"date": d, "count": c} for d, c in sorted(by_day.items())]
+
+    def avg(key: str) -> float:
+        return round(sum(r[key] for r in runs) / total, 2) if total else 0.0
+
+    return {
+        "total_runs": total,
+        "completed_runs": completed,
+        "stopped_runs": total - completed,
+        "avg_duration_s": avg("duration_s"),
+        "avg_distance_traveled": avg("distance_traveled"),
+        "avg_replans": avg("replans_triggered"),
+        "runs_with_replans": runs_with_replans,
+        "obstacle_type_counts": obstacle_type_counts,
+        "runs_per_day": runs_per_day,
+        "recent_runs": list(reversed(runs[-recent_limit:])),  # newest first
+    }
+
+
 def save_layout(layout_id: str, name: str, layout: WarehouseLayout) -> None:
     with _connect() as conn:
         conn.execute(
