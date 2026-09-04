@@ -56,6 +56,12 @@ export default function App() {
 
     if (clickMode === "queue") {
       setQueuedTargets((q) => [...q, cell]);
+      // Once the previous run isn't actively in progress, its activeRunTargets
+      // is stale — clear it so these new stops show up as markers instead of
+      // being shadowed by the just-finished route (see targetMarkers below).
+      if (!robot || !RUNNING_STATES.has(robot.state)) {
+        setActiveRunTargets([]);
+      }
       return;
     }
 
@@ -101,6 +107,10 @@ export default function App() {
     resetRun();
   };
 
+  const removeQueuedTarget = (index: number) => {
+    setQueuedTargets((q) => q.filter((_, i) => i !== index));
+  };
+
   const handleStartRun = () => {
     setActiveRunTargets(queuedTargets.length > 0 ? queuedTargets : [layout.target]);
     startRun(queuedTargets.length > 0 ? queuedTargets : undefined);
@@ -120,115 +130,143 @@ export default function App() {
         onFloorClick={handleFloorClick}
       />
 
-      <div className="hud">
-        <div className="hud-header">
-          <div className="hud-title">Husky Digital Twin</div>
-          <div className="hud-status">
-            <span className="hud-status-dot" style={{ background: STATUS_DOT_COLOR[status] ?? "#8b929a" }} />
-            {status}
+      <div className="left-column">
+        <div className="hud">
+          <div className="hud-header">
+            <div className="hud-title">Husky Digital Twin</div>
+            <div className="hud-status">
+              <span className="hud-status-dot" style={{ background: STATUS_DOT_COLOR[status] ?? "#8b929a" }} />
+              {status}
+            </div>
           </div>
-        </div>
 
-        <div className="hud-section">
-          <div className="hud-section-title">Status</div>
-          <div className="hud-stat-grid">
-            <div className="hud-stat">
-              <span className="hud-stat-label">state</span>
-              <span className="hud-stat-value">{robot.state}</span>
-            </div>
-            <div className="hud-stat">
-              <span className="hud-stat-label">replans</span>
-              <span className="hud-stat-value">{robot.replans}</span>
-            </div>
-            <div className="hud-stat">
-              <span className="hud-stat-label">pos x</span>
-              <span className="hud-stat-value">{robot.position[0].toFixed(1)}</span>
-            </div>
-            <div className="hud-stat">
-              <span className="hud-stat-label">pos y</span>
-              <span className="hud-stat-value">{robot.position[1].toFixed(1)}</span>
-            </div>
-            {robot.task_queue.length > 0 && (
+          <div className="hud-section">
+            <div className="hud-section-title">Status</div>
+            <div className="hud-stat-grid">
               <div className="hud-stat">
-                <span className="hud-stat-label">stops left</span>
-                <span className="hud-stat-value">{robot.task_queue.length}</span>
+                <span className="hud-stat-label">state</span>
+                <span className="hud-stat-value">{robot.state}</span>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="hud-section">
-          <div className="hud-section-title">Run</div>
-          <div className="btn-row">
-            <button onClick={handleStartRun} disabled={isRunning} className="btn btn-primary">
-              Start Run{queuedTargets.length > 0 ? ` (${queuedTargets.length})` : ""}
-            </button>
-            <button onClick={handleReset} className="btn">
-              Reset
-            </button>
-          </div>
-        </div>
-
-        <div className="hud-section">
-          <div className="hud-section-title">Click Mode</div>
-          <div className="btn-row">
-            <button
-              onClick={() => setClickMode("obstacle")}
-              className={`btn btn-toggle${clickMode === "obstacle" ? " selected" : ""}`}
-            >
-              Place Obstacle
-            </button>
-            <button
-              onClick={() => setClickMode("queue")}
-              className={`btn btn-toggle${clickMode === "queue" ? " selected" : ""}`}
-            >
-              Queue Stop
-            </button>
-          </div>
-
-          {clickMode === "obstacle" && (
-            <>
-              <div className="btn-row" style={{ marginTop: 8 }}>
-                {OBSTACLE_TYPES.map(({ type, label }) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedType(type)}
-                    className={`btn btn-toggle btn-small${selectedType === type ? " selected" : ""}`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="hud-stat">
+                <span className="hud-stat-label">replans</span>
+                <span className="hud-stat-value">{robot.replans}</span>
               </div>
+              <div className="hud-stat">
+                <span className="hud-stat-label">pos x</span>
+                <span className="hud-stat-value">{robot.position[0].toFixed(1)}</span>
+              </div>
+              <div className="hud-stat">
+                <span className="hud-stat-label">pos y</span>
+                <span className="hud-stat-value">{robot.position[1].toFixed(1)}</span>
+              </div>
+              {robot.task_queue.length > 0 && (
+                <div className="hud-stat">
+                  <span className="hud-stat-label">stops left</span>
+                  <span className="hud-stat-value">{robot.task_queue.length}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="hud-section">
+            <div className="hud-section-title">Run</div>
+            <div className="btn-row">
+              <button onClick={handleStartRun} disabled={isRunning} className="btn btn-primary">
+                Start Run{queuedTargets.length > 0 ? ` (${queuedTargets.length})` : ""}
+              </button>
+              <button onClick={handleReset} className="btn">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div className="hud-section">
+            <div className="hud-section-title">Obstacles</div>
+            <div className="btn-row">
+              {OBSTACLE_TYPES.map(({ type, label }) => (
+                <button
+                  key={type}
+                  onClick={() => {
+                    setSelectedType(type);
+                    setClickMode("obstacle");
+                  }}
+                  className={`btn btn-toggle${
+                    clickMode === "obstacle" && selectedType === type ? " selected" : ""
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {clickMode === "obstacle" && (
               <div className="hud-hint">
                 click the floor to drop a {OBSTACLE_TYPES.find((o) => o.type === selectedType)?.label.toLowerCase()}
               </div>
-            </>
-          )}
+            )}
+          </div>
 
-          {clickMode === "queue" && (
-            <>
-              <div className="hud-hint">click the floor to queue a stop (visited in order)</div>
-              {queuedTargets.length > 0 && (
-                <>
-                  <div className="hud-queue">
-                    queue: {queuedTargets.map((c) => `(${c[0]}, ${c[1]})`).join(" → ")}
-                  </div>
-                  <button onClick={() => setQueuedTargets([])} className="btn btn-small" style={{ marginTop: 6 }}>
-                    Clear queue
-                  </button>
-                </>
-              )}
-            </>
-          )}
+          <div className="hud-section">
+            <div className="hud-section-title">World</div>
+            <div className="btn-row">
+              <button onClick={() => setEditorOpen(true)} className="btn">
+                Edit Layout
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="hud-section">
-          <div className="hud-section-title">World</div>
-          <div className="btn-row">
-            <button onClick={() => setEditorOpen(true)} className="btn">
-              Edit Layout
+        <div className="route-panel">
+          <div className="route-panel-header">
+            <div className="route-panel-title">Route</div>
+            <button
+              onClick={() => setClickMode("queue")}
+              className={`btn btn-toggle btn-small${clickMode === "queue" ? " selected" : ""}`}
+            >
+              Add Stop
             </button>
           </div>
+
+          {clickMode === "queue" && (
+            <div className="hud-hint" style={{ marginTop: 0, marginBottom: 10 }}>
+              click the floor to add a stop — add as many as you like, in order
+            </div>
+          )}
+
+          {queuedTargets.length === 0 ? (
+            <div className="hud-hint" style={{ marginTop: 0 }}>
+              {clickMode === "queue" ? (
+                "No stops yet — click the floor to add your first one."
+              ) : (
+                <>
+                  No stops planned. Click <strong>Add Stop</strong> above, then click the floor to build a route —
+                  otherwise Start Run sends the robot straight to the default target.
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="route-list">
+                {queuedTargets.map((c, i) => (
+                  <div key={i} className="route-item">
+                    <span className="route-item-index">{i + 1}</span>
+                    <span className="route-item-coord">
+                      ({c[0]}, {c[1]})
+                    </span>
+                    <button
+                      onClick={() => removeQueuedTarget(i)}
+                      className="route-item-remove"
+                      aria-label={`Remove stop ${i + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setQueuedTargets([])} className="btn btn-small" style={{ marginTop: 8 }}>
+                Clear all
+              </button>
+            </>
+          )}
         </div>
       </div>
 
