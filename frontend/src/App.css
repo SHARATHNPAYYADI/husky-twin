@@ -1,8 +1,16 @@
-.hud {
+.left-column {
   position: absolute;
   top: 16px;
   left: 16px;
+  bottom: 16px;
   width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hud {
+  flex: 0 0 auto;
   font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
   font-size: 12px;
   color: #c7ccd1;
@@ -13,6 +21,35 @@
   padding: 14px 16px 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
+}
+
+.route-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  font-size: 12px;
+  color: #c7ccd1;
+  background: rgba(20, 23, 26, 0.86);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  overflow-y: auto;
+}
+
+.route-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.route-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
 }
 
 .right-column {
@@ -240,10 +277,56 @@
   line-height: 1.5;
 }
 
-.hud-queue {
-  margin-top: 8px;
-  font-size: 10.5px;
-  color: #8b929a;
-  line-height: 1.5;
-  word-break: break-word;
+.route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.route-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
+  padding: 5px 6px 5px 8px;
+  font-size: 11px;
+}
+
+.route-item-index {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #0b1a10;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.route-item-coord {
+  flex: 1;
+  color: #e5e8eb;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-item-remove {
+  background: transparent;
+  border: none;
+  color: #767c83;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.route-item-remove:hover {
+  color: #e66767;
+  background: rgba(230, 103, 103, 0.14);
 }
