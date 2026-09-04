@@ -102,3 +102,36 @@ export interface LayoutSummary {
 export interface SavedLayout extends LayoutSummary {
   layout: WarehouseLayout;
 }
+
+// REST-only — see backend/app/db.py's runs table / get_stats().
+export interface RunRecord {
+  run_id: string;
+  duration_s: number;
+  distance_traveled: number;
+  replans_triggered: number;
+  obstacles_hit: number;
+  obstacles_encountered: string[];
+  start_time: string;
+  end_time: string;
+  status: "completed" | "stopped";
+  legs: TaskLeg[];
+  created_at: string;
+}
+
+export interface RunsPerDay {
+  date: string;
+  count: number;
+}
+
+export interface RunStats {
+  total_runs: number;
+  completed_runs: number;
+  stopped_runs: number;
+  avg_duration_s: number;
+  avg_distance_traveled: number;
+  avg_replans: number;
+  runs_with_replans: number;
+  obstacle_type_counts: Record<string, number>;
+  runs_per_day: RunsPerDay[];
+  recent_runs: RunRecord[];
+}

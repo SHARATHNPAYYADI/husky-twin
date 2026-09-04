@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Scene } from "./scene/Scene";
 import { ReportPanel } from "./components/ReportPanel";
 import { LayoutEditor } from "./components/LayoutEditor";
+import { MetricsDashboard } from "./components/MetricsDashboard";
 import { useSimStore } from "./store/simStore";
 import { connect, resetRun, sendPlaceObstacle, startRun } from "./ws/client";
 import type { Cell, ObstacleType } from "./schema/types";
@@ -36,6 +37,7 @@ export default function App() {
   // stops are reached; cleared on Reset.
   const [activeRunTargets, setActiveRunTargets] = useState<Cell[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
 
   const handleFloorClick = (cell: Cell) => {
     if (!layout) return;
@@ -133,6 +135,9 @@ export default function App() {
           <button onClick={() => setEditorOpen(true)} style={btnStyle}>
             Edit Layout
           </button>
+          <button onClick={() => setDashboardOpen(true)} style={btnStyle}>
+            Metrics
+          </button>
         </div>
 
         <div style={{ marginTop: 12, fontSize: 11, color: "#8b929a" }}>click mode</div>
@@ -207,6 +212,8 @@ export default function App() {
       {showReportModal && report && (
         <ReportPanel report={report} onClose={() => setDismissedReportId(report.run_id)} />
       )}
+
+      {dashboardOpen && <MetricsDashboard onClose={() => setDashboardOpen(false)} />}
 
       {editorOpen && (
         <LayoutEditor

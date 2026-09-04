@@ -17,6 +17,7 @@ Message protocol (matches app.schema.WSMessage):
 REST (app/db.py backs these with SQLite — see that module for caveats):
   GET /health
   GET /runs?limit=50          -> list of past RunReports, newest first
+  GET /runs/stats             -> aggregate stats across all stored runs (for the metrics dashboard)
   GET /runs/{run_id}          -> single RunReport
   GET /layouts                -> list of saved layout summaries (no cell data)
   GET /layouts/starter        -> a freshly generated layout, as a starting point for the editor
@@ -162,6 +163,11 @@ def health() -> dict:
 @app.get("/runs")
 def list_runs(limit: int = 50) -> list[dict]:
     return db.list_runs(limit=limit)
+
+
+@app.get("/runs/stats")
+def get_run_stats() -> dict:
+    return db.get_stats()
 
 
 @app.get("/runs/{run_id}")
