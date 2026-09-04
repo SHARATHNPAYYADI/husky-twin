@@ -29,6 +29,7 @@ export function LayoutEditor({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("My Layout");
   const [savedLayouts, setSavedLayouts] = useState<LayoutSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +42,14 @@ export function LayoutEditor({ onClose }: { onClose: () => void }) {
         setSavedLayouts(list);
         setLoading(false);
       })
-      .catch((e) => !cancelled && setError(String(e)));
+      .catch((e) => {
+        if (cancelled) return;
+        setInitError(
+          `Failed to load: ${String(e)}. If this is the deployed site, the backend's ` +
+            "FRONTEND_ORIGINS may not include this origin yet (CORS) — check the Render logs/env vars.",
+        );
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -212,6 +220,13 @@ export function LayoutEditor({ onClose }: { onClose: () => void }) {
 
         {loading ? (
           <div style={{ marginTop: 20, color: "#8b929a" }}>loading starter layout…</div>
+        ) : initError ? (
+          <div style={{ marginTop: 20, maxWidth: 360 }}>
+            <div style={{ color: "#ef4444", fontSize: 12, lineHeight: 1.5 }}>{initError}</div>
+            <button onClick={onClose} style={{ ...btnStyle, marginTop: 14 }}>
+              Close
+            </button>
+          </div>
         ) : (
           <div style={{ marginTop: 14, display: "flex", gap: 16 }}>
             <canvas
