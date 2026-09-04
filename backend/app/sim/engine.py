@@ -182,6 +182,8 @@ class SimulationEngine:
                 self._finish_run(status="completed")
 
     def reset(self) -> None:
+        """Resets the whole environment, not just the robot — clears every
+        placed/wandering obstacle too, so a run starts from a clean slate."""
         self._path = [tuple(self.layout.start)]
         self._progress = 0.0
         self._run_id = None
@@ -190,6 +192,10 @@ class SimulationEngine:
         self.last_report = None
         self._queue = []
         self._legs = []
+
+        if self.obstacles:
+            self.obstacles = {}
+            self.obstacles_dirty = True
 
         self.robot = RobotState(
             position=(float(self.layout.start[0]), float(self.layout.start[1])),
