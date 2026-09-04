@@ -1,6 +1,89 @@
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: rgba(20, 23, 26, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  color: #c7ccd1;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-brand-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #d6531f, #f2c14e);
+  box-shadow: 0 0 10px rgba(214, 83, 31, 0.45);
+  flex-shrink: 0;
+}
+
+.topbar-brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+.topbar-brand-sub {
+  font-size: 9.5px;
+  color: #767c83;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-clock {
+  font-size: 12px;
+  color: #c7ccd1;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c7ccd1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+
+.topbar-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .left-column {
   position: absolute;
-  top: 16px;
+  top: 68px;
   left: 16px;
   bottom: 16px;
   width: 248px;
@@ -54,7 +137,7 @@
 
 .right-column {
   position: absolute;
-  top: 16px;
+  top: 68px;
   right: 16px;
   bottom: 16px;
   width: 300px;
@@ -144,22 +227,6 @@
   letter-spacing: 0.01em;
 }
 
-.hud-status {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  color: #8b929a;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.hud-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  display: inline-block;
-}
 
 .hud-section {
   padding-top: 12px;

@@ -5,6 +5,7 @@ import { ReportPanel } from "./components/ReportPanel";
 import { LayoutEditor } from "./components/LayoutEditor";
 import { MetricsSidePanel } from "./components/MetricsSidePanel";
 import { RobotCamPanel } from "./components/RobotCamPanel";
+import { TopBar } from "./components/TopBar";
 import { useSimStore } from "./store/simStore";
 import { connect, resetRun, sendPlaceObstacle, startRun } from "./ws/client";
 import type { Cell, ObstacleType } from "./schema/types";
@@ -17,12 +18,6 @@ const OBSTACLE_TYPES: { type: ObstacleType; label: string }[] = [
 ];
 
 type ClickMode = "obstacle" | "queue";
-
-const STATUS_DOT_COLOR: Record<string, string> = {
-  open: "#0ca30c",
-  connecting: "#fab219",
-  closed: "#e66767",
-};
 
 export default function App() {
   useEffect(() => {
@@ -72,19 +67,22 @@ export default function App() {
 
   if (!layout || !robot) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          background: "#14171a",
-          color: "#c7ccd1",
-          fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', monospace",
-          fontSize: 13,
-        }}
-      >
-        connecting to backend ({status})…
+      <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+        <TopBar connectionStatus={status} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            background: "#14171a",
+            color: "#c7ccd1",
+            fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Code', monospace",
+            fontSize: 13,
+          }}
+        >
+          connecting to backend ({status})…
+        </div>
       </div>
     );
   }
@@ -112,7 +110,15 @@ export default function App() {
   };
 
   const handleStartRun = () => {
-    setActiveRunTargets(queuedTargets.length > 0 ? queuedTargets : [layout.target]);
+    const targets = queuedTargets.length > 0 ? queuedTargets : [layout.target];
+    // After a run, the robot sits exactly on its last stop — re-running
+    // straight to that same default target (or a queued stop that happens
+    // to match it) has zero distance to cover, so the backend reports it
+    // "completed" instantly with no visible movement. Skip that no-op.
+    const currentCell: Cell = [Math.round(robot.position[0]), Math.round(robot.position[1])];
+    if (targets[0][0] === currentCell[0] && targets[0][1] === currentCell[1]) return;
+
+    setActiveRunTargets(targets);
     startRun(queuedTargets.length > 0 ? queuedTargets : undefined);
     setQueuedTargets([]);
   };
@@ -130,14 +136,12 @@ export default function App() {
         onFloorClick={handleFloorClick}
       />
 
+      <TopBar connectionStatus={status} robotState={robot.state} />
+
       <div className="left-column">
         <div className="hud">
           <div className="hud-header">
             <div className="hud-title">Husky Digital Twin</div>
-            <div className="hud-status">
-              <span className="hud-status-dot" style={{ background: STATUS_DOT_COLOR[status] ?? "#8b929a" }} />
-              {status}
-            </div>
           </div>
 
           <div className="hud-section">
