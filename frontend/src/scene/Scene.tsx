@@ -52,12 +52,7 @@ export function Scene({
       <TargetMarkers layout={layout} targets={targets} reachedCount={targetsReachedCount} />
       <HuskyRobot layout={layout} position={robotPosition} heading={robotHeading} />
 
-      <OrbitControls
-        makeDefault
-        minDistance={8}
-        maxDistance={80}
-        maxPolarAngle={Math.PI / 2.05}
-      />
+      <OrbitControls makeDefault minDistance={8} maxDistance={80} maxPolarAngle={Math.PI / 2.05} />
     </Canvas>
   );
 }

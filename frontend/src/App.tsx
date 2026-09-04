@@ -4,6 +4,7 @@ import { Scene } from "./scene/Scene";
 import { ReportPanel } from "./components/ReportPanel";
 import { LayoutEditor } from "./components/LayoutEditor";
 import { MetricsSidePanel } from "./components/MetricsSidePanel";
+import { RobotCamPanel } from "./components/RobotCamPanel";
 import { useSimStore } from "./store/simStore";
 import { connect, resetRun, sendPlaceObstacle, startRun } from "./ws/client";
 import type { Cell, ObstacleType } from "./schema/types";
@@ -231,7 +232,16 @@ export default function App() {
         </div>
       </div>
 
-      <MetricsSidePanel />
+      <div className="right-column">
+        <MetricsSidePanel />
+        <RobotCamPanel
+          layout={layout}
+          robotPosition={robot.position}
+          robotHeading={robot.heading}
+          obstacles={obstacles}
+          path={robot.path}
+        />
+      </div>
 
       {showReportModal && report && (
         <ReportPanel report={report} onClose={() => setDismissedReportId(report.run_id)} />
