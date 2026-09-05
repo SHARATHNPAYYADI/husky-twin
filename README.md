@@ -16,8 +16,7 @@ Inspired by [WareTwin](https://github.com/WayneChou-bot/WareTwin).
 > history also resets on every backend deploy/restart — see
 > [Deployment](#deployment).
 
-![Husky Digital Twin — warehouse overview](docs/preview.png)
-![Run report panel](docs/report-panel.png)
+![Husky Digital Twin — demo](demo/demo_v1.gif)
 
 ## What it does
 
